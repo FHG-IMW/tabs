@@ -6,12 +6,12 @@ describe Tabs do
   describe ".create_metric" do
 
     it "raises an error if the type is invalid" do
-      lambda { Tabs.create_metric("foo", "foobar") }.should raise_error(Tabs::UnknownTypeError)
+      expect { Tabs.create_metric("foo", "foobar") }.to raise_error(Tabs::UnknownTypeError)
     end
 
     it "raises an error if the metric already exists" do
       Tabs.create_metric("foo", "counter")
-      lambda { Tabs.create_metric("foo", "counter") }.should raise_error(Tabs::DuplicateMetricError)
+      expect { Tabs.create_metric("foo", "counter") }.to raise_error(Tabs::DuplicateMetricError)
     end
 
     it "returns a Counter metric if 'counter' was the specified type" do
@@ -73,11 +73,11 @@ describe Tabs do
 
     it "returns true if the metric exists" do
       Tabs.create_metric("foo", "counter")
-      expect(Tabs.metric_exists?("foo")).to be_true
+      expect(Tabs.metric_exists?("foo")).to be_truthy
     end
 
     it "returns false if the metric does not exist" do
-      expect(Tabs.metric_exists?("foo")).to be_false
+      expect(Tabs.metric_exists?("foo")).to be_falsey
     end
 
   end
@@ -95,13 +95,13 @@ describe Tabs do
 
     it "results in metric_exists? returning false" do
       Tabs.drop_metric!("foo")
-      expect(Tabs.metric_exists?("foo")).to be_false
+      expect(Tabs.metric_exists?("foo")).to be_falsey
     end
 
     it "calls drop! on the metric" do
       metric = double(:metric)
-      Tabs.stub(get_metric: metric)
-      metric.should_receive(:drop!)
+      allow(Tabs).to receive(:get_metric).and_return(metric)
+      expect(metric).to receive(:drop!)
       Tabs.drop_metric!("foo")
     end
 
@@ -113,8 +113,8 @@ describe Tabs do
       Tabs.create_metric("foo", "counter")
       Tabs.create_metric("bar", "value")
       Tabs.drop_all_metrics!
-      expect(Tabs.metric_exists?("foo")).to be_false
-      expect(Tabs.metric_exists?("bar")).to be_false
+      expect(Tabs.metric_exists?("foo")).to be_falsey
+      expect(Tabs.metric_exists?("bar")).to be_falsey
     end
 
   end
@@ -123,19 +123,19 @@ describe Tabs do
 
     it "raises a Tabs::MetricTypeMismatchError if the metric is the wrong type" do
       Tabs.create_metric("foo", "value")
-      lambda { Tabs.increment_counter("foo") }.should raise_error(Tabs::MetricTypeMismatchError)
+      expect { Tabs.increment_counter("foo") }.to raise_error(Tabs::MetricTypeMismatchError)
     end
 
     it "creates the metric if it doesn't exist" do
-      expect(Tabs.metric_exists?("foo")).to be_false
-      lambda { Tabs.increment_counter("foo") }.should_not raise_error
-      expect(Tabs.metric_exists?("foo")).to be_true
+      expect(Tabs.metric_exists?("foo")).to be_falsey
+      expect { Tabs.increment_counter("foo") }.to_not raise_error
+      expect(Tabs.metric_exists?("foo")).to be_truthy
     end
 
     it "calls increment on the metric" do
       metric = Tabs.create_metric("foo", "counter")
-      Tabs.stub(get_metric: metric)
-      metric.should_receive(:increment)
+      allow(Tabs).to receive(:get_metric).and_return(metric)
+      expect(metric).to receive(:increment)
       Tabs.increment_counter("foo")
     end
 
@@ -144,21 +144,21 @@ describe Tabs do
   describe ".record_value" do
 
     it "creates the metric if it doesn't exist" do
-      expect(Tabs.metric_exists?("foo")).to be_false
-      lambda { Tabs.record_value("foo", 38) }.should_not raise_error
-      expect(Tabs.metric_exists?("foo")).to be_true
+      expect(Tabs.metric_exists?("foo")).to be_falsey
+      expect { Tabs.record_value("foo", 38) }.to_not raise_error
+      expect(Tabs.metric_exists?("foo")).to be_truthy
     end
 
     it "raises a Tabs::MetricTypeMismatchError if the metric is the wrong type" do
       Tabs.create_metric("foo", "counter")
-      lambda { Tabs.record_value("foo", 27) }.should raise_error(Tabs::MetricTypeMismatchError)
+      expect { Tabs.record_value("foo", 27) }.to raise_error(Tabs::MetricTypeMismatchError)
     end
 
     it "calls record on the metric" do
       Timecop.freeze(Time.now.utc)
       metric = Tabs.create_metric("foo", "value")
-      Tabs.stub(get_metric: metric)
-      metric.should_receive(:record).with(42, Time.now.utc)
+      allow(Tabs).to receive(:get_metric).and_return(metric)
+      expect(metric).to receive(:record).with(42, Time.now.utc)
       Tabs.record_value("foo", 42)
     end
 
@@ -206,7 +206,7 @@ describe Tabs do
 
     it "does not allow you to call drop_by_resolution if task metric" do
       metric = Tabs.create_metric("baz", "task")
-      metric.should_not_receive(:drop_by_resolution!)
+      expect(metric).to_not receive(:drop_by_resolution!)
       Tabs.drop_resolution_for_metric!("baz", :minute)
     end
 
@@ -216,7 +216,7 @@ describe Tabs do
       metric.record(42, now)
       Tabs.drop_resolution_for_metric!("baz", :minute)
       minute_key = Tabs::Metrics::Value.new("baz").storage_key(:minute, now)
-      expect(Tabs::Storage.exists(minute_key)).to be_false
+      expect(Tabs::Storage.exists(minute_key)).to be_falsey
     end
   end
 
